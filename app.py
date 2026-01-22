@@ -4,17 +4,21 @@ from transformers import BertTokenizerFast, BertForSequenceClassification
 
 st.set_page_config(page_title="Child Development Fact Checker")
 
+MODEL_NAME = "poojasrisunkara/child-dev-bert"
+
 @st.cache_resource
 def load_model():
-    tokenizer = BertTokenizerFast.from_pretrained("child_dev_bert")
-    model = BertForSequenceClassification.from_pretrained("child_dev_bert")
+    tokenizer = BertTokenizerFast.from_pretrained(MODEL_NAME)
+    model = BertForSequenceClassification.from_pretrained(MODEL_NAME)
     model.eval()
     return tokenizer, model
 
 tokenizer, model = load_model()
 
 st.title("🧒 Child Development Fact vs Myth Checker")
-st.write("Enter a statement related to child development to check whether it is a **FACT** or a **MYTH**.")
+st.write(
+    "Enter a statement related to child development to check whether it is a **FACT** or a **MYTH**."
+)
 
 user_input = st.text_area("Enter statement here:")
 
@@ -40,4 +44,8 @@ if st.button("Check"):
             st.error("❌ MYTH")
 
 st.markdown("---")
-st.caption("⚠️ This system is for educational purposes and may not be correct in all cases.")
+st.caption(
+    "⚠️ This tool is for educational purposes and may not be correct in all cases."
+)
+
+
