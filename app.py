@@ -4,11 +4,13 @@ import torch.nn.functional as F
 import re
 from transformers import BertTokenizerFast, BertForSequenceClassification
 
+# ---------------- CONFIG ----------------
 st.set_page_config(page_title="Child Development Fact Checker")
 
 MODEL_NAME = "poojasrisunkara/child-dev-bert"
 CONFIDENCE_THRESHOLD = 0.65
 
+# ---------------- NORMALIZATION ----------------
 
 REPLACEMENTS = {
     r"\bkids\b": "children",
@@ -18,8 +20,13 @@ REPLACEMENTS = {
 }
 
 HIGH_RISK_TOPICS = {
-    "physical_punishment": ["beat", "beating", "hit", "hitting", "spank", "spanking"]
+    "physical_punishment": [
+        "beat", "beating", "hit", "hitting",
+        "spank", "spanking", "punish", "punishment"
+    ]
 }
+
+NEGATION_WORDS = ["not", "never", "no", "should not", "do not", "does not"]
 
 def normalize_text(text: str) -> str:
     text = text.lower().strip()
@@ -30,7 +37,7 @@ def normalize_text(text: str) -> str:
 
     tokens = text.split()
 
-    # Fragment completion (SAFE, NO MEANING ADDED)
+    # Safe fragment completion
     if len(tokens) < 4:
         text = text + " in child development"
 
@@ -46,6 +53,10 @@ def detect_high_risk(text: str):
                 return topic
     return None
 
+def contains_negation(text: str) -> bool:
+    return any(n in text for n in NEGATION_WORDS)
+
+# ---------------- MODEL LOAD ----------------
 
 @st.cache_resource
 def load_model():
@@ -56,6 +67,7 @@ def load_model():
 
 tokenizer, model = load_model()
 
+# ---------------- UI ----------------
 
 st.title("🧒 Child Development Fact vs Myth Checker")
 st.write(
@@ -65,6 +77,7 @@ st.write(
 
 user_input = st.text_area("Enter statement here:")
 
+# ---------------- PREDICTION ----------------
 
 if st.button("Check"):
     if user_input.strip() == "":
@@ -75,6 +88,7 @@ if st.button("Check"):
 
         # Step 2: Detect high-risk topic
         risk_topic = detect_high_risk(normalized_input)
+        has_negation = contains_negation(normalized_input)
 
         # Step 3: Tokenize
         inputs = tokenizer(
@@ -92,14 +106,18 @@ if st.button("Check"):
             confidence, prediction = torch.max(probs, dim=1)
 
         confidence = confidence.item()
-        prediction = prediction.item()  # 0 = FACT, 1 = MYTH (assumed)
+        prediction = prediction.item()  # 0 = FACT, 1 = MYTH
 
-        # Step 5: Safety override
-        if risk_topic == "physical_punishment" and prediction == 0:
-            prediction = 1
-            confidence = max(confidence, 0.85)
+        # ---------------- SAFETY OVERRIDE (FIXED) ----------------
+        if risk_topic == "physical_punishment":
+            if has_negation:
+                prediction = 0  # FACT
+                confidence = max(confidence, 0.85)
+            else:
+                prediction = 1  # MYTH
+                confidence = max(confidence, 0.85)
 
-        # Step 6: UNCERTAIN logic (unchanged)
+        # ---------------- UNCERTAIN LOGIC ----------------
         if confidence < CONFIDENCE_THRESHOLD:
             st.warning(f"⚠️ UNCERTAIN (confidence: {confidence:.2f})")
             st.write(
@@ -112,19 +130,20 @@ if st.button("Check"):
             else:
                 st.error(f"❌ MYTH (confidence: {confidence:.2f})")
 
-        # Optional: transparency (VERY GOOD FOR REVIEWERS)
+        # ---------------- TRANSPARENCY ----------------
         with st.expander("See how your input was interpreted"):
             st.write("**Original input:**")
             st.code(user_input)
             st.write("**Normalized input:**")
             st.code(normalized_input)
 
+# ---------------- FOOTER ----------------
 
 st.markdown("---")
 st.caption(
     "⚠️ Educational use only. "
     "Short or ambiguous inputs are normalized before classification. "
-    "The system combines machine learning with rule-based safeguards."
+    "High-risk child welfare topics use negation-aware safety rules."
 )
 
 
