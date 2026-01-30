@@ -28,6 +28,20 @@ HIGH_RISK_TOPICS = {
 
 NEGATION_WORDS = ["not", "never", "no", "should not", "do not", "does not"]
 
+QUESTION_PATTERNS = [
+    (r"is that bad\??$", "this is bad"),
+    (r"is it bad\??$", "this is bad"),
+    (r"is this bad\??$", "this is bad"),
+    (r"is it normal\??$", "this is normal"),
+    (r"is this normal\??$", "this is normal"),
+]
+
+def normalize_question(text: str) -> str:
+    text = text.lower().strip()
+    for pattern, replacement in QUESTION_PATTERNS:
+        text = re.sub(pattern, replacement, text)
+    return text
+
 def normalize_text(text: str) -> str:
     text = text.lower().strip()
     text = re.sub(r"[^\w\s]", "", text)
@@ -72,7 +86,7 @@ tokenizer, model = load_model()
 st.title("🧒 Child Development Fact vs Myth Checker")
 st.write(
     "Enter a statement related to child development. "
-    "Short or informal inputs are automatically normalized for better accuracy."
+    "Questions and short inputs are automatically normalized for better accuracy."
 )
 
 user_input = st.text_area("Enter statement here:")
@@ -83,14 +97,17 @@ if st.button("Check"):
     if user_input.strip() == "":
         st.warning("Please enter a statement.")
     else:
-        # Step 1: Normalize
-        normalized_input = normalize_text(user_input)
+        # Step 1: Question normalization
+        question_normalized = normalize_question(user_input)
 
-        # Step 2: Detect high-risk topic
+        # Step 2: Text normalization
+        normalized_input = normalize_text(question_normalized)
+
+        # Step 3: Detect high-risk topic
         risk_topic = detect_high_risk(normalized_input)
         has_negation = contains_negation(normalized_input)
 
-        # Step 3: Tokenize
+        # Step 4: Tokenize
         inputs = tokenizer(
             normalized_input,
             return_tensors="pt",
@@ -99,7 +116,7 @@ if st.button("Check"):
             max_length=128
         )
 
-        # Step 4: Predict
+        # Step 5: Predict
         with torch.no_grad():
             outputs = model(**inputs)
             probs = F.softmax(outputs.logits, dim=1)
@@ -108,7 +125,7 @@ if st.button("Check"):
         confidence = confidence.item()
         prediction = prediction.item()  # 0 = FACT, 1 = MYTH
 
-        # ---------------- SAFETY OVERRIDE (FIXED) ----------------
+        # ---------------- SAFETY OVERRIDE ----------------
         if risk_topic == "physical_punishment":
             if has_negation:
                 prediction = 0  # FACT
@@ -134,7 +151,9 @@ if st.button("Check"):
         with st.expander("See how your input was interpreted"):
             st.write("**Original input:**")
             st.code(user_input)
-            st.write("**Normalized input:**")
+            st.write("**After question normalization:**")
+            st.code(question_normalized)
+            st.write("**Final normalized input:**")
             st.code(normalized_input)
 
 # ---------------- FOOTER ----------------
@@ -142,9 +161,10 @@ if st.button("Check"):
 st.markdown("---")
 st.caption(
     "⚠️ Educational use only. "
-    "Short or ambiguous inputs are normalized before classification. "
+    "User questions are normalized into declarative statements before classification. "
     "High-risk child welfare topics use negation-aware safety rules."
 )
+
 
 
 
