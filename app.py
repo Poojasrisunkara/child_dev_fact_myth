@@ -28,6 +28,16 @@ HIGH_RISK_TOPICS = {
 
 NEGATION_WORDS = ["not", "never", "no", "should not", "do not", "does not"]
 
+# 👇 THIS WAS MISSING
+VARIABILITY_PHRASES = [
+    "some children",
+    "can be",
+    "may be",
+    "varies",
+    "different rates",
+    "not all children"
+]
+
 QUESTION_PATTERNS = [
     (r"is that bad\??$", "this is bad"),
     (r"is it bad\??$", "this is bad"),
@@ -51,7 +61,6 @@ def normalize_text(text: str) -> str:
 
     tokens = text.split()
 
-    # Safe fragment completion
     if len(tokens) < 4:
         text = text + " in child development"
 
@@ -69,6 +78,9 @@ def detect_high_risk(text: str):
 
 def contains_negation(text: str) -> bool:
     return any(n in text for n in NEGATION_WORDS)
+
+def contains_variability(text: str) -> bool:
+    return any(v in text for v in VARIABILITY_PHRASES)
 
 # ---------------- MODEL LOAD ----------------
 
@@ -97,15 +109,16 @@ if st.button("Check"):
     if user_input.strip() == "":
         st.warning("Please enter a statement.")
     else:
-        # Step 1: Question normalization
+        # Step 1: Normalize question
         question_normalized = normalize_question(user_input)
 
-        # Step 2: Text normalization
+        # Step 2: Normalize text
         normalized_input = normalize_text(question_normalized)
 
-        # Step 3: Detect high-risk topic
+        # Step 3: Detect patterns
         risk_topic = detect_high_risk(normalized_input)
         has_negation = contains_negation(normalized_input)
+        has_variability = contains_variability(normalized_input)
 
         # Step 4: Tokenize
         inputs = tokenizer(
@@ -128,11 +141,16 @@ if st.button("Check"):
         # ---------------- SAFETY OVERRIDE ----------------
         if risk_topic == "physical_punishment":
             if has_negation:
-                prediction = 0  # FACT
+                prediction = 0
                 confidence = max(confidence, 0.85)
             else:
-                prediction = 1  # MYTH
+                prediction = 1
                 confidence = max(confidence, 0.85)
+
+        # ---------------- VARIABILITY OVERRIDE ----------------
+        if has_variability:
+            prediction = 0  # FACT
+            confidence = max(confidence, 0.75)
 
         # ---------------- UNCERTAIN LOGIC ----------------
         if confidence < CONFIDENCE_THRESHOLD:
@@ -162,9 +180,8 @@ st.markdown("---")
 st.caption(
     "⚠️ Educational use only. "
     "User questions are normalized into declarative statements before classification. "
-    "High-risk child welfare topics use negation-aware safety rules."
+    "Variability-aware and negation-aware rules are applied for child development topics."
 )
-
 
 
 
