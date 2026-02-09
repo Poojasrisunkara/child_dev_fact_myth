@@ -4,13 +4,13 @@ import torch.nn.functional as F
 import re
 from transformers import BertTokenizerFast, BertForSequenceClassification
 
-# ---------------- CONFIG ----------------
+#config
 st.set_page_config(page_title="Child Development Fact Checker")
 
 MODEL_NAME = "poojasrisunkara/child-dev-bert"
 CONFIDENCE_THRESHOLD = 0.65
 
-# ---------------- NORMALIZATION ----------------
+# normalization
 
 REPLACEMENTS = {
     r"\bkids\b": "children",
@@ -28,7 +28,7 @@ HIGH_RISK_TOPICS = {
 
 NEGATION_WORDS = ["not", "never", "no", "should not", "do not", "does not"]
 
-# 👇 THIS WAS MISSING
+
 VARIABILITY_PHRASES = [
     "some children",
     "can be",
@@ -82,7 +82,7 @@ def contains_negation(text: str) -> bool:
 def contains_variability(text: str) -> bool:
     return any(v in text for v in VARIABILITY_PHRASES)
 
-# ---------------- MODEL LOAD ----------------
+# Loading model
 
 @st.cache_resource
 def load_model():
@@ -93,7 +93,7 @@ def load_model():
 
 tokenizer, model = load_model()
 
-# ---------------- UI ----------------
+#UI
 
 st.title("🧒 Child Development Fact vs Myth Checker")
 st.write(
@@ -103,7 +103,7 @@ st.write(
 
 user_input = st.text_area("Enter statement here:")
 
-# ---------------- PREDICTION ----------------
+#predict
 
 if st.button("Check"):
     if user_input.strip() == "":
@@ -138,7 +138,6 @@ if st.button("Check"):
         confidence = confidence.item()
         prediction = prediction.item()  # 0 = FACT, 1 = MYTH
 
-        # ---------------- SAFETY OVERRIDE ----------------
         if risk_topic == "physical_punishment":
             if has_negation:
                 prediction = 0
@@ -147,12 +146,10 @@ if st.button("Check"):
                 prediction = 1
                 confidence = max(confidence, 0.85)
 
-        # ---------------- VARIABILITY OVERRIDE ----------------
         if has_variability:
             prediction = 0  # FACT
             confidence = max(confidence, 0.75)
 
-        # ---------------- UNCERTAIN LOGIC ----------------
         if confidence < CONFIDENCE_THRESHOLD:
             st.warning(f"⚠️ UNCERTAIN (confidence: {confidence:.2f})")
             st.write(
@@ -165,7 +162,7 @@ if st.button("Check"):
             else:
                 st.error(f"❌ MYTH (confidence: {confidence:.2f})")
 
-        # ---------------- TRANSPARENCY ----------------
+       
         with st.expander("See how your input was interpreted"):
             st.write("**Original input:**")
             st.code(user_input)
@@ -174,14 +171,14 @@ if st.button("Check"):
             st.write("**Final normalized input:**")
             st.code(normalized_input)
 
-# ---------------- FOOTER ----------------
+#footer
 
 st.markdown("---")
 st.caption(
     "⚠️ Educational use only. "
     "User questions are normalized into declarative statements before classification. "
-    "Variability-aware and negation-aware rules are applied for child development topics."
 )
+
 
 
 
