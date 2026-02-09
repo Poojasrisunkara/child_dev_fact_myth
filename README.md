@@ -1,6 +1,63 @@
-# child_dev_fact_myth
-This Streamlit application classifies child-development statements as Fact or Myth using machine learning and natural language processing techniques. The goal is to help parents, educators, and caregivers quickly verify child-development information and reduce misinformation.
+# 🧒 Child Development Fact vs Myth Checker
 
-The app preprocesses user input through text normalization, including lowercasing, punctuation removal, stop-word filtering, and lemmatization. It then converts the text into numerical representations using TF-IDF for baseline models and BERT embeddings for contextual understanding.
+This Streamlit web application classifies child-development statements as **FACT**, **MYTH**, or **UNCERTAIN** using a fine-tuned **BERT (bert-base-uncased)** model.  
+The goal of this project is to help reduce misinformation and promote evidence-based child-development knowledge.
 
-Predictions are generated using a fine-tuned BERT model with confidence scoring, along with safety checks to handle sensitive child-development topics.
+---
+
+## 🤖 BERT Classification Pipeline
+
+### 🔹 Data Preparation
+- Child-development statements were cleaned and normalized.
+- Labels were standardized and encoded for binary classification (FACT / MYTH).
+- Ambiguous statements were removed to improve training quality.
+
+---
+
+### 🔹 Tokenization
+- Text is processed using the **BERT tokenizer**.
+- Converts statements into:
+  - Token IDs
+  - Attention masks
+  - Special tokens (`[CLS]`, `[SEP]`)
+- Input sequences are truncated and padded to a maximum length of **128 tokens**.
+
+---
+
+### 🔹 Model Training
+- A pretrained **BERT sequence classification model** was fine-tuned.
+- Training configuration:
+  - Learning rate: `2e-5`
+  - Batch size: `8`
+  - Epochs: `3`
+  - Weight decay applied for regularization
+- The best-performing checkpoint was automatically selected during training.
+
+---
+
+### 🔹 Model Evaluation
+Model performance was evaluated using:
+- Accuracy
+- Precision
+- Recall
+- F1-score
+
+Evaluation was performed on unseen test data.
+
+---
+
+### 🔹 Inference & Prediction
+- User input is normalized and tokenized.
+- The trained BERT model generates prediction probabilities using Softmax.
+- Predictions include confidence scores.
+- Low-confidence outputs are labeled as **UNCERTAIN** for reliability.
+
+---
+
+### 🔹 Deployment
+- The fine-tuned BERT model is integrated into a **Streamlit interface**.
+- Provides real-time classification.
+- Displays input normalization steps for transparency.
+
+
+
